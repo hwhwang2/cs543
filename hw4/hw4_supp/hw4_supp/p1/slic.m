@@ -81,13 +81,12 @@ for itr = 1:ItrTimes
     % error time e
     error = inf;
     if size(a,1) == 0
-        error = sum(sqrt(sum((Cnew - C).^2,2)))
+        error = sum(sqrt(sum((Cnew - C).^2,2)));
     end
     C = Cnew;
     if error < threshold
         break
     end
-    itr
 end
 %
 image(l);
