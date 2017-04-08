@@ -10,16 +10,12 @@ function [cIndMap, time, imgVis] = slic(img, K, compactness)
 %   - cIndMap: a map of type uint16 storing the cluster memberships
 %   - time:    the time required for the computation
 %   - imgVis:  the input image overlaid with the segmentation
-clear all
-close all
-K = 128;
-img= imread('house2.jpg');
+m = compactness;
+ItrTimes = 40;
 threshold = 10;
-ItrTimes = 10;
-m = 0.2;
 tic;
 % Put your SLIC implementation here
-im = im2double(img);
+im = rgb2lab(img);
 [x,y,RGB] = size(im);
 N = x*y;
 S = (sqrt(N/K));
@@ -63,34 +59,49 @@ for itr = 1:ItrTimes
     end
     % Update
     % Compute new cluster centers.
+    Cnew = ones(size(C,1),size(C,2));
     parfor k = 1:size(C,1)
         [Rx Ry] = find(l == k);
         if size(Rx,1) < S^2*0.5
             C(k,:) = [-1 -1];
+            Cnew(k,:) = [-1 -1];
             continue
         end
         subim = im(Rx,Ry,:);
         r = diag(subim(:,:,1));
-        g = diag(subim(:,:,2));
+        a = diag(subim(:,:,2));
         b = diag(subim(:,:,3));
-        d = findDistSum(Rx,Ry,r,g,b,m,S)
+        d = findDistSum(Rx,Ry,r,a,b,m,S)
         [M I] = min(d);
-        C(k,:) = [Rx(I) Ry(I)];
+        Cnew(k,:) = [Rx(I) Ry(I)];
     end
     a = find(C(:,1) == -1);
     C(a,:) = [];
+    Cnew(a,:) = [];
+    % error time e
+    error = inf;
+    if size(a,1) == 0
+        error = sum(sqrt(sum((Cnew - C).^2,2)))
+    end
+    C = Cnew;
+    if error < threshold
+        break
+    end
+    itr
 end
 %
+image(l);
 [gx gy] = gradient(l);
 g = gx.^2+gy.^2;
 l = uint16(l);
-g(g~=0) = 1;
+g = g~=0;
 g = bwmorph(g, 'skel');
-im(g) = 255;
-figure
-imshow(im);
-
+img([g g g]) = 255;
+imgVis = img;
+cIndMap = l;
 time = toc;
+figure
+imshow(img);
 
 end
 
